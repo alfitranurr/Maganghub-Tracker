@@ -10,14 +10,7 @@
  * 2. Klik menu Extensi -> Apps Script.
  * 3. Hapus semua kode yang ada, lalu paste seluruh kode di bawah ini.
  * 4. Klik tombol "Simpan" (Ctrl+S / Cmd+S).
- * 5. Klik "Deploy" -> "Deployment baru" (New Deployment).
- * 6. Pilih Jenis: "Aplikasi Web" (Web App).
- * 7. Deskripsi: "Maganghub Tracker API v2".
- * 8. Jalankan sebagai (Execute as): "Saya" (Me).
- * 9. Yang memiliki akses (Who has access): "Siapa saja" (Anyone).
- * 10. Klik "Deploy", lalu Berikan Izin (Authorize Access).
- * 11. Salin URL Aplikasi Web (Web App URL) yang berakhiran `/exec`.
- * 12. Tempel URL tersebut pada file `.env.local` di variabel `NEXT_PUBLIC_API_URL`.
+ * 5. Klik "Deploy" -> "Kelola deployment" -> Edit -> Versi Baru -> Deploy.
  * ============================================================================
  */
 
@@ -230,8 +223,7 @@ function syncKuotaDanPelamarMaganghub(sheet) {
 
     if (!posisi && !perusahaan) continue;
 
-    var keyword = posisi || perusahaan;
-    var result = fetchDetailDariMaganghub(keyword, perusahaan, posisi);
+    var result = fetchDetailDariMaganghub(perusahaan, posisi);
 
     if (result) {
       var newKuota = Number(result.kuota) || 0;
@@ -253,45 +245,89 @@ function syncKuotaDanPelamarMaganghub(sheet) {
   };
 }
 
-function fetchDetailDariMaganghub(keyword, namaPerusahaan, namaPosisi) {
-  var url = "https://maganghub.kemnaker.go.id/api/v1/lowongan?keyword=" + encodeURIComponent(keyword);
+/**
+ * SMART FUZZY SEARCH KEMNAKER API
+ */
+function fetchDetailDariMaganghub(namaPerusahaan, namaPosisi) {
+  // 1. Ekstrak nama perusahaan bersih (hilangkan PT, Tbk, Indonesia)
+  var cleanComp = (namaPerusahaan || "")
+    .replace(/PT\.?\s*/gi, "")
+    .replace(/Tbk\.?/gi, "")
+    .replace(/Indonesia/gi, "")
+    .trim();
 
-  try {
-    var response = UrlFetchApp.fetch(url, {
-      method: "GET",
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "application/json"
-      },
-      muteHttpExceptions: true
-    });
+  var cleanPos = (namaPosisi || "")
+    .replace(/Analyst/gi, "")
+    .replace(/Intern/gi, "")
+    .replace(/Specialist/gi, "")
+    .trim();
 
-    if (response.getResponseCode() !== 200) return null;
+  // Urutan kata kunci pencarian API
+  var searchTerms = [cleanComp, namaPerusahaan, namaPosisi, cleanPos].filter(Boolean);
+  var items = [];
 
-    var json = JSON.parse(response.getContentText());
-    var items = json.data || json.result || [];
-    if (!items || items.length === 0) return null;
+  for (var s = 0; s < searchTerms.length; s++) {
+    var term = searchTerms[s];
+    if (!term || term.length < 2) continue;
 
-    var match = items.find(function(item) {
-      var itemComp = String(item.nama_perusahaan || item.perusahaan || "").toLowerCase();
-      var itemPos = String(item.nama_lowongan || item.posisi || "").toLowerCase();
+    var url = "https://maganghub.kemnaker.go.id/api/v1/lowongan?keyword=" + encodeURIComponent(term);
 
-      return (
-        (namaPerusahaan && itemComp.indexOf(namaPerusahaan.toLowerCase()) !== -1) ||
-        (namaPosisi && itemPos.indexOf(namaPosisi.toLowerCase()) !== -1)
-      );
-    });
+    try {
+      var response = UrlFetchApp.fetch(url, {
+        method: "GET",
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          "Accept": "application/json"
+        },
+        muteHttpExceptions: true
+      });
 
-    var target = match || items[0];
-
-    return {
-      kuota: target.kuota || target.quota || 0,
-      pelamar: target.jumlah_pelamar || target.total_applicant || 0
-    };
-  } catch (err) {
-    Logger.log("Error fetch Maganghub: " + err.toString());
-    return null;
+      if (response.getResponseCode() === 200) {
+        var json = JSON.parse(response.getContentText());
+        var resItems = json.data || json.result || [];
+        if (resItems && resItems.length > 0) {
+          items = resItems;
+          break; // Mengambil hasil pencarian terbaik pertama
+        }
+      }
+    } catch (e) {}
   }
+
+  if (!items || items.length === 0) return null;
+
+  // 2. Bobot Kesamaan Kata (Word Overlap Scoring)
+  var targetText = (namaPerusahaan + " " + namaPosisi).toLowerCase();
+  var targetWords = targetText
+    .replace(/[^\w\s]/g, "")
+    .split(/\s+/)
+    .filter(function(w) { return w.length > 2 && w !== "indonesia" && w !== "tbk"; });
+
+  var target = null;
+  var bestScore = -1;
+
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var itemText = ((item.nama_perusahaan || item.perusahaan || "") + " " + (item.nama_lowongan || item.posisi || "")).toLowerCase();
+
+    var score = 0;
+    for (var w = 0; w < targetWords.length; w++) {
+      if (itemText.indexOf(targetWords[w]) !== -1) {
+        score += 1;
+      }
+    }
+
+    if (score > bestScore) {
+      bestScore = score;
+      target = item;
+    }
+  }
+
+  if (!target) return null;
+
+  return {
+    kuota: target.kuota || target.quota || 0,
+    pelamar: target.jumlah_pelamar || target.total_applicant || 0
+  };
 }
 
 function autoRenumber(sheet) {
