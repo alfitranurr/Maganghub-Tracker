@@ -1,7 +1,10 @@
 import { JobItem, JobFormData, ApiResponse } from "@/types/job";
 import { calculatePeluang } from "@/lib/utils";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const DEFAULT_API_URL =
+  "https://script.google.com/macros/s/AKfycbygPrqprGvJZifIIKjCQtQU2h4eO_hSicLluLbWC-OrgV3rnp5XfnznEWOq99gfFI6Q/exec";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL;
 
 // Default mock initial data if spreadsheet URL is not configured yet
 let mockJobs: JobItem[] = [
@@ -63,8 +66,8 @@ let mockJobs: JobItem[] = [
 ];
 
 export async function fetchJobs(): Promise<JobItem[]> {
-  if (!API_URL || API_URL.includes("YOUR_SCRIPT_ID")) {
-    console.warn("NEXT_PUBLIC_API_URL is empty or default. Using mock data.");
+  if (!API_URL) {
+    console.warn("NEXT_PUBLIC_API_URL is empty. Using mock data.");
     return mockJobs;
   }
 
@@ -99,7 +102,7 @@ export async function fetchJobs(): Promise<JobItem[]> {
 export async function addJobApi(formData: JobFormData): Promise<JobItem> {
   const peluang = calculatePeluang(formData.kuota, formData.pelamar);
 
-  if (!API_URL || API_URL.includes("YOUR_SCRIPT_ID")) {
+  if (!API_URL) {
     const newId = mockJobs.length > 0 ? Math.max(...mockJobs.map((j) => j.id)) + 1 : 1;
     const newItem: JobItem = {
       ...formData,
@@ -143,7 +146,7 @@ export async function addJobApi(formData: JobFormData): Promise<JobItem> {
 export async function updateJobApi(id: number, formData: JobFormData): Promise<void> {
   const peluang = calculatePeluang(formData.kuota, formData.pelamar);
 
-  if (!API_URL || API_URL.includes("YOUR_SCRIPT_ID")) {
+  if (!API_URL) {
     mockJobs = mockJobs.map((job) =>
       job.id === id ? { ...job, ...formData, peluang } : job
     );
@@ -174,7 +177,7 @@ export async function updateJobApi(id: number, formData: JobFormData): Promise<v
 }
 
 export async function deleteJobApi(id: number): Promise<void> {
-  if (!API_URL || API_URL.includes("YOUR_SCRIPT_ID")) {
+  if (!API_URL) {
     mockJobs = mockJobs.filter((job) => job.id !== id);
     // Renumber
     mockJobs = mockJobs.map((job, idx) => ({ ...job, no: idx + 1 }));
@@ -203,8 +206,7 @@ export async function deleteJobApi(id: number): Promise<void> {
 }
 
 export async function syncMaganghubApi(): Promise<JobItem[]> {
-  if (!API_URL || API_URL.includes("YOUR_SCRIPT_ID")) {
-    // Mock sync effect
+  if (!API_URL) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     return mockJobs;
   }
