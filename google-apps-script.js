@@ -246,7 +246,7 @@ function syncKuotaDanPelamarMaganghub(sheet) {
 }
 
 /**
- * SMART FUZZY SEARCH KEMNAKER API
+ * SMART MULTI-PAGE FUZZY SEARCH KEMNAKER API
  */
 function fetchDetailDariMaganghub(namaPerusahaan, namaPosisi) {
   // 1. Ekstrak nama perusahaan bersih (hilangkan PT, Tbk, Indonesia)
@@ -270,27 +270,31 @@ function fetchDetailDariMaganghub(namaPerusahaan, namaPosisi) {
     var term = searchTerms[s];
     if (!term || term.length < 2) continue;
 
-    var url = "https://maganghub.kemnaker.go.id/api/v1/lowongan?keyword=" + encodeURIComponent(term);
+    // Fetch page 1, 2, dan 3 untuk memastikan seluruh halaman pencarian Kemnaker terbaca
+    for (var page = 1; page <= 3; page++) {
+      var url = "https://maganghub.kemnaker.go.id/api/v1/lowongan?limit=50&page=" + page + "&keyword=" + encodeURIComponent(term);
 
-    try {
-      var response = UrlFetchApp.fetch(url, {
-        method: "GET",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-          "Accept": "application/json"
-        },
-        muteHttpExceptions: true
-      });
+      try {
+        var response = UrlFetchApp.fetch(url, {
+          method: "GET",
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+            "Accept": "application/json"
+          },
+          muteHttpExceptions: true
+        });
 
-      if (response.getResponseCode() === 200) {
-        var json = JSON.parse(response.getContentText());
-        var resItems = json.data || json.result || [];
-        if (resItems && resItems.length > 0) {
-          items = resItems;
-          break; // Mengambil hasil pencarian terbaik pertama
+        if (response.getResponseCode() === 200) {
+          var json = JSON.parse(response.getContentText());
+          var resItems = json.data || json.result || json.items || [];
+          if (resItems && resItems.length > 0) {
+            items = items.concat(resItems);
+          }
         }
-      }
-    } catch (e) {}
+      } catch (e) {}
+    }
+
+    if (items.length > 0) break; // Mengambil seluruh item dari halaman 1 - 3
   }
 
   if (!items || items.length === 0) return null;
