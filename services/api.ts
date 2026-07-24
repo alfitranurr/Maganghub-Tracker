@@ -1,3 +1,4 @@
+/* cspell:disable */
 import { JobItem, JobFormData, ApiResponse } from "@/types/job";
 import { calculatePeluang } from "@/lib/utils";
 
