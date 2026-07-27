@@ -150,11 +150,13 @@ export function useJobs() {
   // CRUD actions with Optimistic UI updates
   const handleAddJob = async (formData: JobFormData) => {
     const tempPeluang = calculatePeluang(formData.kuota, formData.pelamar);
+    const nowIso = new Date().toISOString();
     const tempJob: JobItem = {
       ...formData,
       id: Date.now(),
       no: jobs.length + 1,
       peluang: tempPeluang,
+      lastUpdated: nowIso,
     };
 
     // Optimistic update
@@ -165,7 +167,7 @@ export function useJobs() {
     setLastUpdated(new Date());
 
     try {
-      await addJobApi(formData);
+      await addJobApi({ ...formData, lastUpdated: nowIso });
       toast.success("Tambah berhasil! Data tersimpan di spreadsheet.");
       loadJobs({ silent: true }); // Silent sync with spreadsheet
     } catch (err) {
@@ -178,6 +180,7 @@ export function useJobs() {
 
   const handleUpdateJob = async (id: number, formData: JobFormData) => {
     const updatedPeluang = calculatePeluang(formData.kuota, formData.pelamar);
+    const nowIso = new Date().toISOString();
 
     // Optimistic local update (instant UI reaction without flicker)
     setJobs((prev) =>
@@ -187,6 +190,7 @@ export function useJobs() {
               ...job,
               ...formData,
               peluang: updatedPeluang,
+              lastUpdated: nowIso,
             }
           : job
       )
@@ -194,7 +198,7 @@ export function useJobs() {
     setLastUpdated(new Date());
 
     try {
-      await updateJobApi(id, formData);
+      await updateJobApi(id, { ...formData, lastUpdated: nowIso });
       toast.success("Edit berhasil! Data spreadsheet diperbarui.");
       loadJobs({ silent: true }); // Silent sync in background
     } catch (err) {

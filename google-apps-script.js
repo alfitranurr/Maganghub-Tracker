@@ -104,7 +104,7 @@ function getJobs(sheet) {
     var kuota = Number(row[3]) || 0;
     var pelamar = Number(row[4]) || 0;
     var peluang = calculatePeluang(kuota, pelamar);
-    var lastUpdated = row[8] ? String(row[8]) : new Date().toISOString();
+    var lastUpdated = row[8] ? String(row[8]) : "";
 
     jobs.push({
       id: i, // ID mewakili baris ke-i (1-indexed data row)

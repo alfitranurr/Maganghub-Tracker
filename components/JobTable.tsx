@@ -172,7 +172,7 @@ export function JobTable({
         cell: (info) => {
           const val = info.getValue<string | undefined>();
           let formattedStr = "-";
-          if (val) {
+          if (val && val.trim() !== "") {
             try {
               const d = new Date(val);
               if (!isNaN(d.getTime())) {

@@ -94,7 +94,7 @@ export async function fetchJobs(): Promise<JobItem[]> {
         id: item.id || index + 1,
         no: index + 1,
         peluang: calculatePeluang(item.kuota, item.pelamar),
-        lastUpdated: item.lastUpdated || new Date().toISOString(),
+        lastUpdated: item.lastUpdated ? String(item.lastUpdated) : "",
       }));
     }
     throw new Error(data.message || data.error || "Gagal mengambil data.");
