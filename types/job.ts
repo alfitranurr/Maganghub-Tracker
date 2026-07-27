@@ -14,6 +14,7 @@ export interface JobItem {
   peluang: number; // Percentage value (0 - 100)
   alamat: string;
   status: JobStatus;
+  lastUpdated?: string;
 }
 
 export type JobFormData = Omit<JobItem, "id" | "no" | "peluang">;

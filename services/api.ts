@@ -5,6 +5,7 @@ import { calculatePeluang } from "@/lib/utils";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 // Default mock initial data if spreadsheet URL is not configured yet
+// Default mock initial data if spreadsheet URL is not configured yet
 let mockJobs: JobItem[] = [
   {
     id: 1,
@@ -16,6 +17,7 @@ let mockJobs: JobItem[] = [
     peluang: 20,
     alamat: "Jakarta Pusat, DKI Jakarta",
     status: "Lamaran Telah Dikirim",
+    lastUpdated: new Date(Date.now() - 3600000 * 2).toISOString(),
   },
   {
     id: 2,
@@ -27,6 +29,7 @@ let mockJobs: JobItem[] = [
     peluang: 21.43,
     alamat: "Jakarta Pusat, DKI Jakarta",
     status: "Dalam Tahap Shortlist",
+    lastUpdated: new Date(Date.now() - 3600000 * 5).toISOString(),
   },
   {
     id: 3,
@@ -38,6 +41,7 @@ let mockJobs: JobItem[] = [
     peluang: 50,
     alamat: "Jakarta Selatan, DKI Jakarta",
     status: "Status Belum Ditentukan",
+    lastUpdated: new Date(Date.now() - 3600000 * 12).toISOString(),
   },
   {
     id: 4,
@@ -49,6 +53,7 @@ let mockJobs: JobItem[] = [
     peluang: 33.33,
     alamat: "Jakarta Selatan, DKI Jakarta",
     status: "Lamaran Telah Dikirim",
+    lastUpdated: new Date(Date.now() - 3600000 * 24).toISOString(),
   },
   {
     id: 5,
@@ -60,6 +65,7 @@ let mockJobs: JobItem[] = [
     peluang: 14.71,
     alamat: "Jakarta Selatan, DKI Jakarta",
     status: "Lamaran Ditolak",
+    lastUpdated: new Date(Date.now() - 3600000 * 48).toISOString(),
   },
 ];
 
@@ -88,6 +94,7 @@ export async function fetchJobs(): Promise<JobItem[]> {
         id: item.id || index + 1,
         no: index + 1,
         peluang: calculatePeluang(item.kuota, item.pelamar),
+        lastUpdated: item.lastUpdated || new Date().toISOString(),
       }));
     }
     throw new Error(data.message || data.error || "Gagal mengambil data.");
@@ -99,6 +106,7 @@ export async function fetchJobs(): Promise<JobItem[]> {
 
 export async function addJobApi(formData: JobFormData): Promise<JobItem> {
   const peluang = calculatePeluang(formData.kuota, formData.pelamar);
+  const nowIso = new Date().toISOString();
 
   if (!API_URL || API_URL.includes("YOUR_SCRIPT_ID")) {
     const newId = mockJobs.length > 0 ? Math.max(...mockJobs.map((j) => j.id)) + 1 : 1;
@@ -107,6 +115,7 @@ export async function addJobApi(formData: JobFormData): Promise<JobItem> {
       id: newId,
       no: mockJobs.length + 1,
       peluang,
+      lastUpdated: nowIso,
     };
     mockJobs.push(newItem);
     return newItem;
@@ -116,6 +125,7 @@ export async function addJobApi(formData: JobFormData): Promise<JobItem> {
     action: "add",
     ...formData,
     peluang,
+    lastUpdated: nowIso,
   };
 
   const res = await fetch(API_URL, {
@@ -138,15 +148,17 @@ export async function addJobApi(formData: JobFormData): Promise<JobItem> {
     id: Date.now(),
     no: 1,
     peluang,
+    lastUpdated: nowIso,
   };
 }
 
 export async function updateJobApi(id: number, formData: JobFormData): Promise<void> {
   const peluang = calculatePeluang(formData.kuota, formData.pelamar);
+  const nowIso = new Date().toISOString();
 
   if (!API_URL || API_URL.includes("YOUR_SCRIPT_ID")) {
     mockJobs = mockJobs.map((job) =>
-      job.id === id ? { ...job, ...formData, peluang } : job
+      job.id === id ? { ...job, ...formData, peluang, lastUpdated: nowIso } : job
     );
     return;
   }
@@ -156,6 +168,7 @@ export async function updateJobApi(id: number, formData: JobFormData): Promise<v
     id,
     ...formData,
     peluang,
+    lastUpdated: nowIso,
   };
 
   const res = await fetch(API_URL, {

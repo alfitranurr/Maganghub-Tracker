@@ -1,4 +1,5 @@
 "use client";
+/* cspell:disable */
 
 import React, { useEffect, useTransition } from "react";
 import { useForm, useWatch } from "react-hook-form";

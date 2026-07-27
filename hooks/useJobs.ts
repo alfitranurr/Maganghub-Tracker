@@ -1,8 +1,10 @@
 "use client";
+/* cspell:disable */
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { JobItem, JobFormData, JobStats, JobStatus } from "@/types/job";
 import { fetchJobs, addJobApi, updateJobApi, deleteJobApi, syncMaganghubApi } from "@/services/api";
+import { calculatePeluang } from "@/lib/utils";
 import { toast } from "sonner";
 
 export type SortField = "no" | "peluang";
@@ -12,6 +14,7 @@ export function useJobs() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSyncingMaganghub, setIsSyncingMaganghub] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
   // Filters & Sorting state
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -20,19 +23,24 @@ export function useJobs() {
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc" | null>(null);
 
-  const loadJobs = useCallback(async () => {
-    setIsLoading(true);
+  const loadJobs = useCallback(async (options?: { silent?: boolean }) => {
+    if (!options?.silent) {
+      setIsLoading(true);
+    }
     setError(null);
     try {
       const data = await fetchJobs();
       setJobs(data);
+      setLastUpdated(new Date());
     } catch (err) {
       console.error(err);
       const errMsg = err instanceof Error ? err.message : "Gagal mengambil data.";
       setError(errMsg);
       toast.error("Gagal mengambil data dari Google Spreadsheet.");
     } finally {
-      setIsLoading(false);
+      if (!options?.silent) {
+        setIsLoading(false);
+      }
     }
   }, []);
 
@@ -139,47 +147,86 @@ export function useJobs() {
 
   const togglePeluangSort = () => toggleSort("peluang");
 
-  // CRUD actions
+  // CRUD actions with Optimistic UI updates
   const handleAddJob = async (formData: JobFormData) => {
+    const tempPeluang = calculatePeluang(formData.kuota, formData.pelamar);
+    const tempJob: JobItem = {
+      ...formData,
+      id: Date.now(),
+      no: jobs.length + 1,
+      peluang: tempPeluang,
+    };
+
+    // Optimistic update
+    setJobs((prev) => {
+      const next = [...prev, tempJob];
+      return next.map((item, idx) => ({ ...item, no: idx + 1 }));
+    });
+    setLastUpdated(new Date());
+
     try {
-      const created = await addJobApi(formData);
-      setJobs((prev) => {
-        const next = [...prev, created];
-        return next.map((item, idx) => ({ ...item, no: idx + 1 }));
-      });
+      await addJobApi(formData);
       toast.success("Tambah berhasil! Data tersimpan di spreadsheet.");
-      loadJobs(); // sync with spreadsheet
+      loadJobs({ silent: true }); // Silent sync with spreadsheet
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Gagal menambahkan data.");
+      loadJobs({ silent: true }); // Rollback/refetch on error
       throw err;
     }
   };
 
   const handleUpdateJob = async (id: number, formData: JobFormData) => {
+    const updatedPeluang = calculatePeluang(formData.kuota, formData.pelamar);
+
+    // Optimistic local update (instant UI reaction without flicker)
+    setJobs((prev) =>
+      prev.map((job) =>
+        job.id === id
+          ? {
+              ...job,
+              ...formData,
+              peluang: updatedPeluang,
+            }
+          : job
+      )
+    );
+    setLastUpdated(new Date());
+
     try {
       await updateJobApi(id, formData);
       toast.success("Edit berhasil! Data spreadsheet diperbarui.");
-      loadJobs(); // sync with spreadsheet
+      loadJobs({ silent: true }); // Silent sync in background
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Gagal memperbarui data.");
+      loadJobs({ silent: true }); // Rollback if API fails
       throw err;
     }
   };
 
   const handleDeleteJob = async (id: number) => {
+    const jobToDelete = jobs.find((j) => j.id === id);
+
+    // Optimistic removal (instant row deletion without flicker)
+    setJobs((prev) => {
+      const filtered = prev.filter((j) => j.id !== id);
+      return filtered.map((item, idx) => ({ ...item, no: idx + 1 }));
+    });
+    setLastUpdated(new Date());
+
     try {
       await deleteJobApi(id);
-      setJobs((prev) => {
-        const filtered = prev.filter((j) => j.id !== id);
-        return filtered.map((item, idx) => ({ ...item, no: idx + 1 }));
-      });
-      toast.success("Delete berhasil! Baris dihapus & nomor diurutkan ulang.");
-      loadJobs(); // sync with spreadsheet
+      toast.success(
+        jobToDelete
+          ? `Data "${jobToDelete.posisi}" di ${jobToDelete.namaPerusahaan} berhasil dihapus.`
+          : "Delete berhasil! Baris dihapus & nomor diurutkan ulang."
+      );
+      loadJobs({ silent: true }); // Silent sync in background
     } catch (err) {
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Gagal menghapus data.");
+      loadJobs({ silent: true }); // Rollback on error
       throw err;
     }
   };
@@ -189,6 +236,7 @@ export function useJobs() {
     try {
       const updatedData = await syncMaganghubApi();
       setJobs(updatedData);
+      setLastUpdated(new Date());
       toast.success("Sinkronisasi Maganghub Kemnaker Berhasil! Kuota & Pelamar ter-update.");
     } catch (err) {
       console.error(err);
@@ -204,6 +252,7 @@ export function useJobs() {
     isLoading,
     isSyncingMaganghub,
     error,
+    lastUpdated,
     stats,
     searchQuery,
     setSearchQuery,
@@ -220,6 +269,7 @@ export function useJobs() {
     handleUpdateJob,
     handleDeleteJob,
     handleSyncMaganghub,
-    refreshJobs: loadJobs,
+    refreshJobs: () => loadJobs({ silent: false }),
   };
 }
+

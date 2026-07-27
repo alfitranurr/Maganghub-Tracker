@@ -83,7 +83,8 @@ function ensureHeaderRow(sheet) {
       "Pelamar",
       "Peluang (%)",
       "Alamat",
-      "Status"
+      "Status",
+      "Terakhir Diperbarui"
     ]);
   }
 }
@@ -103,6 +104,7 @@ function getJobs(sheet) {
     var kuota = Number(row[3]) || 0;
     var pelamar = Number(row[4]) || 0;
     var peluang = calculatePeluang(kuota, pelamar);
+    var lastUpdated = row[8] ? String(row[8]) : new Date().toISOString();
 
     jobs.push({
       id: i, // ID mewakili baris ke-i (1-indexed data row)
@@ -113,7 +115,8 @@ function getJobs(sheet) {
       pelamar: pelamar,
       peluang: peluang,
       alamat: String(row[6] || ""),
-      status: String(row[7] || "Status Belum Ditentukan")
+      status: String(row[7] || "Status Belum Ditentukan"),
+      lastUpdated: lastUpdated
     });
   }
 
@@ -124,6 +127,7 @@ function addJob(sheet, item) {
   var kuota = Number(item.kuota) || 0;
   var pelamar = Number(item.pelamar) || 0;
   var peluang = calculatePeluang(kuota, pelamar);
+  var nowStr = item.lastUpdated || new Date().toISOString();
   
   var data = sheet.getDataRange().getValues();
   var nextNo = data.length; // Baris baru akan memiliki No = total baris data (excluding header + 1)
@@ -136,7 +140,8 @@ function addJob(sheet, item) {
     pelamar,
     peluang / 100,
     item.alamat || "",
-    item.status || "Status Belum Ditentukan"
+    item.status || "Status Belum Ditentukan",
+    nowStr
   ];
 
   sheet.appendRow(newRow);
@@ -154,7 +159,8 @@ function addJob(sheet, item) {
       pelamar: pelamar,
       peluang: peluang,
       alamat: item.alamat,
-      status: item.status
+      status: item.status,
+      lastUpdated: nowStr
     }
   };
 }
@@ -173,6 +179,7 @@ function updateJob(sheet, item) {
   var kuota = Number(item.kuota) || 0;
   var pelamar = Number(item.pelamar) || 0;
   var peluang = calculatePeluang(kuota, pelamar);
+  var nowStr = item.lastUpdated || new Date().toISOString();
 
   sheet.getRange(rowIndex, 2).setValue(item.namaPerusahaan || "");
   sheet.getRange(rowIndex, 3).setValue(item.posisi || "");
@@ -181,6 +188,7 @@ function updateJob(sheet, item) {
   sheet.getRange(rowIndex, 6).setValue(peluang / 100);
   sheet.getRange(rowIndex, 7).setValue(item.alamat || "");
   sheet.getRange(rowIndex, 8).setValue(item.status || "Status Belum Ditentukan");
+  sheet.getRange(rowIndex, 9).setValue(nowStr);
 
   autoRenumber(sheet);
 

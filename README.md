@@ -1,3 +1,4 @@
+<!-- cspell:disable -->
 # 🚀 Maganghub Application Tracker
 
 Website **Maganghub Application Tracker** modern, minimalis, dan responsive berbasis **Next.js 15 (App Router)**, **TypeScript**, **Tailwind CSS**, **TanStack Table**, **React Hook Form**, dan **Zod**. Aplikasi ini terhubung langsung ke **Google Spreadsheet** sebagai database utama secara 100% GRATIS melalui **Google Apps Script REST API**.

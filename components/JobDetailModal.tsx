@@ -1,4 +1,5 @@
 "use client";
+/* cspell:disable */
 
 import React from "react";
 import { JobItem } from "@/types/job";
@@ -127,6 +128,28 @@ export function JobDetailModal({
             {job.alamat}
           </p>
         </div>
+
+        {/* Last Updated info */}
+        {job.lastUpdated && (
+          <div className="text-[11px] text-slate-500 text-right font-medium">
+            Terakhir Diperbarui:{" "}
+            <span className="text-slate-700 font-semibold">
+              {(() => {
+                try {
+                  const d = new Date(job.lastUpdated);
+                  return !isNaN(d.getTime())
+                    ? new Intl.DateTimeFormat("id-ID", {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }).format(d) + " WIB"
+                    : job.lastUpdated;
+                } catch {
+                  return job.lastUpdated;
+                }
+              })()}
+            </span>
+          </div>
+        )}
       </div>
 
       <DialogFooter>

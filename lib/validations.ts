@@ -1,3 +1,4 @@
+/* cspell:disable */
 import { z } from "zod";
 
 export const JOB_STATUSES = [

@@ -1,4 +1,5 @@
 "use client";
+/* cspell:disable */
 
 import React, { useState } from "react";
 import { useJobs } from "@/hooks/useJobs";
@@ -10,7 +11,8 @@ import { JobDetailModal } from "@/components/JobDetailModal";
 import { AlertDialog } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { JobItem, JobFormData } from "@/types/job";
-import { AlertCircle, RotateCw, Briefcase, Table, ExternalLink } from "lucide-react";
+import { AlertCircle, RotateCw, Briefcase, Table, ExternalLink, Clock } from "lucide-react";
+import { toast } from "sonner";
 
 export default function DashboardPage() {
   const {
@@ -18,6 +20,7 @@ export default function DashboardPage() {
     isLoading,
     isSyncingMaganghub,
     error,
+    lastUpdated,
     stats,
     searchQuery,
     setSearchQuery,
@@ -66,6 +69,9 @@ export default function DashboardPage() {
   const handleOpenDeleteModal = (job: JobItem) => {
     setDeletingJob(job);
     setIsDeleteOpen(true);
+    toast.info(`Konfirmasi hapus untuk "${job.posisi}" di ${job.namaPerusahaan}.`, {
+      duration: 3000,
+    });
   };
 
   const handleConfirmDelete = async () => {
@@ -76,7 +82,7 @@ export default function DashboardPage() {
       setIsDeleteOpen(false);
       setDeletingJob(null);
     } catch (err) {
-      // Toast already handled
+      // Error toast handled in hook
     } finally {
       setIsDeleting(false);
     }
@@ -89,6 +95,14 @@ export default function DashboardPage() {
       await handleAddJob(formData);
     }
   };
+
+  const formattedHeaderTime = lastUpdated
+    ? new Intl.DateTimeFormat("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(lastUpdated) + " WIB"
+    : null;
 
   return (
     <main className="min-h-screen bg-white text-slate-900 pb-12">
@@ -103,9 +117,15 @@ export default function DashboardPage() {
               <h1 className="text-base font-bold text-slate-900 tracking-tight leading-none">
                 Maganghub Application Tracker
               </h1>
-              <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+              <p className="text-[11px] text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
                 <span>Database: Google Spreadsheet</span>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                {formattedHeaderTime && (
+                  <span className="hidden sm:inline-flex items-center gap-1 text-slate-400 font-normal border-l border-slate-200 pl-1.5">
+                    <Clock className="h-3 w-3 text-slate-400" />
+                    <span>Terakhir diperbarui: <strong className="text-slate-600 font-medium">{formattedHeaderTime}</strong></span>
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -163,6 +183,7 @@ export default function DashboardPage() {
           posisiFilter={posisiFilter}
           onPosisiFilterChange={setPosisiFilter}
           uniquePositions={uniquePositions}
+          lastUpdated={lastUpdated}
           onAddClick={handleOpenAddModal}
           onRefreshClick={refreshJobs}
           onSyncMaganghubClick={handleSyncMaganghub}
@@ -204,9 +225,10 @@ export default function DashboardPage() {
         title="Hapus Posisi Pekerjaan"
         description={
           deletingJob
-            ? `Yakin ingin menghapus data "${deletingJob.posisi}" di ${deletingJob.namaPerusahaan}? Data di baris Google Spreadsheet akan dihapus secara permanen.`
+            ? `Apakah Anda yakin ingin menghapus data posisi ini? Tindakan ini akan menghapus baris data di Google Spreadsheet secara permanen.`
             : "Yakin ingin menghapus data ini?"
         }
+        jobDetails={deletingJob}
         confirmText="Ya, Hapus Data"
         cancelText="Batal"
         onConfirm={handleConfirmDelete}
@@ -215,3 +237,4 @@ export default function DashboardPage() {
     </main>
   );
 }
+

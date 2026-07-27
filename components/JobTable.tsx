@@ -25,6 +25,7 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Inbox,
+  Clock,
 } from "lucide-react";
 
 interface JobTableProps {
@@ -161,6 +162,39 @@ export function JobTable({
               <Badge className={`${getStatusBadgeClass(statusVal)} px-2 py-0.5 text-[11px] whitespace-nowrap`}>
                 {statusVal}
               </Badge>
+            </div>
+          );
+        },
+      },
+      {
+        accessorKey: "lastUpdated",
+        header: () => <span className="text-center block text-[11px]">Terakhir Update</span>,
+        cell: (info) => {
+          const val = info.getValue<string | undefined>();
+          let formattedStr = "-";
+          if (val) {
+            try {
+              const d = new Date(val);
+              if (!isNaN(d.getTime())) {
+                formattedStr = new Intl.DateTimeFormat("id-ID", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }).format(d);
+              } else {
+                formattedStr = val;
+              }
+            } catch {
+              formattedStr = val;
+            }
+          }
+          return (
+            <div className="flex justify-center">
+              <span className="text-[11px] text-slate-500 font-medium whitespace-nowrap bg-slate-50 px-2 py-0.5 rounded border border-slate-200/70 inline-flex items-center gap-1">
+                <Clock className="h-3 w-3 text-slate-400" />
+                {formattedStr}
+              </span>
             </div>
           );
         },

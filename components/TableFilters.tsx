@@ -1,10 +1,11 @@
 "use client";
+/* cspell:disable */
 
 import React from "react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, Plus, Filter, Briefcase, RotateCw, Sparkles } from "lucide-react";
+import { Search, Plus, Filter, Briefcase, RotateCw, Sparkles, Clock } from "lucide-react";
 import { JOB_STATUSES } from "@/lib/validations";
 
 interface TableFiltersProps {
@@ -15,6 +16,7 @@ interface TableFiltersProps {
   posisiFilter: string;
   onPosisiFilterChange: (value: string) => void;
   uniquePositions?: string[];
+  lastUpdated?: Date | null;
   onAddClick: () => void;
   onRefreshClick: () => void;
   onSyncMaganghubClick: () => void;
@@ -30,6 +32,7 @@ export function TableFilters({
   posisiFilter,
   onPosisiFilterChange,
   uniquePositions = [],
+  lastUpdated,
   onAddClick,
   onRefreshClick,
   onSyncMaganghubClick,
@@ -37,6 +40,14 @@ export function TableFilters({
   isSyncingMaganghub = false,
 }: TableFiltersProps) {
   const safePositions = Array.isArray(uniquePositions) ? uniquePositions : [];
+
+  const formattedTime = lastUpdated
+    ? new Intl.DateTimeFormat("id-ID", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }).format(lastUpdated) + " WIB"
+    : null;
 
   return (
     <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 mb-4 bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
@@ -89,8 +100,18 @@ export function TableFilters({
         </div>
       </div>
 
-      {/* Right: Actions */}
+      {/* Right: Last Updated badge & Actions */}
       <div className="flex items-center gap-2 justify-end flex-wrap">
+        {formattedTime && (
+          <span
+            className="hidden xl:inline-flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100/70 border border-slate-200/80 px-2.5 py-1 rounded-md"
+            title={`Terakhir diperbarui pada ${lastUpdated?.toLocaleString("id-ID")}`}
+          >
+            <Clock className="h-3 w-3 text-slate-400" />
+            <span>Update: <strong className="text-slate-700 font-medium">{formattedTime}</strong></span>
+          </span>
+        )}
+
         <Button
           variant="outline"
           size="sm"
@@ -127,3 +148,4 @@ export function TableFilters({
     </div>
   );
 }
+

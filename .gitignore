@@ -1,3 +1,4 @@
+# cspell:disable
 # dependencies
 /node_modules
 /.pnp
@@ -23,6 +24,7 @@ yarn-error.log*
 .env
 
 # vercel
+# cspell:ignore vercel
 .vercel
 
 # typescript

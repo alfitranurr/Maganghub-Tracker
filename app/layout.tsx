@@ -1,3 +1,4 @@
+/* cspell:disable */
 import type { Metadata } from "next";
 import { Toaster } from "sonner";
 import "./globals.css";
